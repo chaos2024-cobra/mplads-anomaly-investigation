@@ -1,0 +1,228 @@
+"""
+MPLADS Anomaly Investigation Dashboard
+========================================
+Talks only to the FastAPI backend (main.py) -- no scoring logic and no
+direct CSV/DB access here. Start the API first.
+
+Run:
+    streamlit run app.py
+"""
+
+import os
+import pandas as pd
+import requests
+import streamlit as st
+
+API_BASE = os.environ.get("MPLADS_API_BASE", "http://localhost:8000")
+
+st.set_page_config(page_title="MPLADS Anomaly Investigation", layout="wide", page_icon="🔍")
+
+
+# --------------------------------------------------------------------------
+# API helpers (cached so filtering doesn't hammer the backend on every rerun)
+# --------------------------------------------------------------------------
+@st.cache_data(ttl=60)
+def api_get(path, params=None):
+    r = requests.get(f"{API_BASE}{path}", params=params, timeout=15)
+    r.raise_for_status()
+    return r.json()
+
+
+def fmt_inr(amount):
+    if amount is None:
+        return "N/A"
+    if amount >= 1e7:
+        return f"₹{amount/1e7:.2f} Cr"
+    if amount >= 1e5:
+        return f"₹{amount/1e5:.2f} L"
+    return f"₹{amount:,.0f}"
+
+
+RISK_COLORS = {
+    "Critical - Priority Investigation": "🔴",
+    "High - Requires Investigation": "🟠",
+    "Medium - Worth Reviewing": "🟡",
+    "Low - Normal Pattern": "🟢",
+}
+
+
+def check_backend():
+    try:
+        requests.get(f"{API_BASE}/", timeout=3)
+        return True
+    except requests.exceptions.RequestException:
+        return False
+
+
+if not check_backend():
+    st.error(
+        f"Can't reach the API at {API_BASE}. Start it first:\n\n"
+        f"`cd backend && uvicorn main:app --reload --port 8000`"
+    )
+    st.stop()
+
+
+# --------------------------------------------------------------------------
+# Header + KPI row
+# --------------------------------------------------------------------------
+st.title("🔍 MPLADS Anomaly Investigation Dashboard")
+st.caption("SIH26102 — explainable anomaly detection over real merged MPLADS records. "
+           "Every flagged case below is a real project from the dataset, not a synthetic example.")
+
+overview = api_get("/api/overview")
+
+c1, c2, c3, c4, c5 = st.columns(5)
+c1.metric("Projects Analyzed", f"{overview['total_works_analyzed']:,}")
+c2.metric("Value Analyzed", fmt_inr(overview["total_amount_analyzed"]))
+c3.metric("Flagged Cases", f"{overview['flagged_count']:,}",
+          help="risk_score >= 25")
+c4.metric("High Risk", f"{overview['high_risk_count']:,}",
+          help="risk_score >= 50")
+c5.metric("Critical", f"{overview['critical_count']:,}",
+          help="risk_score >= 75", delta_color="inverse")
+
+with st.expander("National MPLADS fund context (all sources, not just flagged works)"):
+    st.write(f"Total allocated across all {api_get('/api/filters')['states'].__len__()} states/UTs in this "
+             f"dataset: **{fmt_inr(overview['total_mplads_allocated_all_sources'])}**. "
+             f"Total utilized (works + expenditure + calamity, per official summary): "
+             f"**{fmt_inr(overview['total_mplads_fund_utilized_all_sources'])}**.")
+
+st.divider()
+
+# --------------------------------------------------------------------------
+# Sidebar filters
+# --------------------------------------------------------------------------
+st.sidebar.header("Filters")
+filters = api_get("/api/filters")
+
+f_state = st.sidebar.selectbox("State", ["All"] + filters["states"])
+f_district = st.sidebar.text_input("District (partial match)", "")
+f_category = st.sidebar.selectbox("Work Category", ["All"] + filters["work_types"])
+f_search = st.sidebar.text_input("Search MP name or Work ID", "")
+f_risk_level = st.sidebar.select_slider(
+    "Minimum risk level",
+    options=["Any", "Medium+", "High+", "Critical only"],
+    value="Medium+",
+)
+risk_map = {"Any": 0, "Medium+": 25, "High+": 50, "Critical only": 75}
+
+query = {
+    "min_risk_score": risk_map[f_risk_level],
+    "limit": 200,
+    "sort": "risk_score_desc",
+}
+if f_state != "All":
+    query["state"] = f_state
+if f_district:
+    query["district"] = f_district
+if f_category != "All":
+    query["work_type"] = f_category
+if f_search:
+    query["search"] = f_search
+
+st.sidebar.caption("Backend: " + API_BASE)
+
+# --------------------------------------------------------------------------
+# Main tabs
+# --------------------------------------------------------------------------
+tab_cases, tab_mps = st.tabs(["📋 Flagged Cases", "👤 Top Suspicious MPs"])
+
+with tab_cases:
+    data = api_get("/api/works", params=query)
+    st.write(f"**{data['total']:,}** cases match your filters (showing up to {query['limit']}).")
+
+    if data["results"]:
+        df = pd.DataFrame(data["results"])
+        df_display = df[["risk_score", "risk_level", "mp_name", "state", "work_type", "amount", "date", "work_id"]].copy()
+        df_display["risk_level"] = df_display["risk_level"].map(lambda x: f"{RISK_COLORS.get(x,'')} {x.split(' - ')[0]}")
+        df_display["amount"] = df_display["amount"].map(fmt_inr)
+        df_display.columns = ["Risk", "Level", "MP", "State", "Category", "Amount", "Date", "Work ID"]
+
+        event = st.dataframe(
+            df_display, width='stretch', hide_index=True,
+            on_select="rerun", selection_mode="single-row", height=380,
+        )
+
+        selected_work_id = None
+        if event.selection and event.selection.get("rows"):
+            selected_work_id = df.iloc[event.selection["rows"][0]]["work_id"]
+        else:
+            st.info("Select a row above to open the full investigation view for that case.")
+            selected_work_id = df.iloc[0]["work_id"] if st.toggle("Preview top case by default", value=True) else None
+
+        # ------------------------------------------------------------------
+        # Drill-down panel
+        # ------------------------------------------------------------------
+        if selected_work_id:
+            st.divider()
+            detail = api_get(f"/api/works/{selected_work_id}")
+            st.subheader(f"{RISK_COLORS.get(detail['risk_level'],'')} {detail['work_id']}")
+
+            dc1, dc2, dc3 = st.columns(3)
+            with dc1:
+                st.markdown(f"**MP:** {detail['mp_name']}")
+                st.markdown(f"**Location:** {detail['constituency']}, {detail['state']}")
+                st.markdown(f"**Implementing Agency:** {detail.get('district','—')}")
+            with dc2:
+                st.markdown(f"**Amount:** {fmt_inr(detail['amount'])}")
+                st.markdown(f"**Date:** {detail['date']}")
+                st.markdown(f"**Status:** {detail['payment_status']}")
+            with dc3:
+                st.markdown(f"**Risk Score: {detail['risk_score']}/100**")
+                st.markdown(f"**Level:** {detail['risk_level']}")
+                st.markdown(f"**Category:** {detail['work_type']}")
+
+            st.markdown("**Why this was flagged:**")
+            for part in detail["reason"].split(" | "):
+                if part != "No anomaly signal triggered.":
+                    st.markdown(f"- {part}")
+
+            ev = detail["evidence"]
+            score_df = pd.DataFrame({
+                "Signal": ["Cost Anomaly", "Text Mismatch", "MP Concentration"],
+                "Points": [ev["cost_anomaly"]["score"], ev["text_mismatch"]["score"],
+                           ev["mp_category_concentration"]["score"]],
+            }).set_index("Signal")
+            vc1, vc2 = st.columns(2)
+            with vc1:
+                st.markdown("**Risk score breakdown (of 100)**")
+                st.bar_chart(score_df, horizontal=True)
+
+            peers = api_get(f"/api/works/{selected_work_id}/peers", params={"n": 6})
+            with vc2:
+                st.markdown(f"**This work vs. comparable '{peers['work_type']}' works**")
+                comp_df = pd.DataFrame({
+                    "Work": ["THIS WORK", "Category median"] + [p["work_id"][-6:] for p in peers["peers"]],
+                    "Amount": [peers["this_work_amount"], peers["category_median_amount"]] +
+                              [p["amount"] for p in peers["peers"]],
+                }).set_index("Work")
+                st.bar_chart(comp_df)
+
+            with st.expander(f"📎 Comparable projects (full detail, n={len(peers['peers'])})"):
+                st.dataframe(pd.DataFrame(peers["peers"]), hide_index=True, width='stretch')
+
+            rel = api_get(f"/api/works/{selected_work_id}/related-transactions", params={"n": 10})
+            with st.expander(f"📎 This MP's other transactions in the same category ({len(rel['transactions'])})"):
+                st.caption(rel["note"])
+                if rel["transactions"]:
+                    st.dataframe(pd.DataFrame(rel["transactions"]), hide_index=True, width='stretch')
+                else:
+                    st.write("No other transactions found in this category for this MP.")
+    else:
+        st.success("No cases match these filters.")
+
+with tab_mps:
+    mp_data = api_get("/api/mps/top-suspicious", params={"n": 20, "min_risk_score": 50})
+    st.write("MPs ranked by number of High/Critical-risk works. "
+             "One outlier here is usually worth a look before drilling into individual cases.")
+    mp_df = pd.DataFrame(mp_data["results"])
+    if not mp_df.empty:
+        mp_df_display = mp_df.rename(columns={
+            "mp_name": "MP", "state": "State", "constituency": "Constituency",
+            "flagged_works": "Flagged Works", "critical_works": "Critical Works",
+            "avg_risk_score": "Avg Risk", "max_risk_score": "Max Risk",
+        })
+        st.bar_chart(mp_df_display.set_index("MP")["Flagged Works"].head(10))
+        st.dataframe(mp_df_display, hide_index=True, width='stretch')
+    else:
+        st.write("No MPs currently meet this threshold.")

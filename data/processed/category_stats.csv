@@ -1,0 +1,89 @@
+Work_Type,nat_median,nat_mad,nat_n,nat_median_amount
+ Laying of synthetic turfs for hockey and football,13.592367006650065,0.0,1,800000.0000000003
+" Providing sports equipment, except consumable items",13.811730422245407,0.00021784556843229552,7,996226.9999999995
+"Construction of Government office buildings (Post office, Police station, Police chauki, etc.)",13.815510557964274,0.0004396932735160064,4,999999.9999999995
+Construction of New Building,13.815510557964274,0.0,3,999999.9999999995
+Construction of additional rooms and halls in the existing public and community building,13.122363377404328,0.6931471805599454,38,499999.9999999997
+Construction of artificial reef,11.918390573078392,0.6931471805599454,2,149999.99999999994
+Construction of boundary walls of existing public and community buildings,13.11295000938783,0.5014122557494929,144,495315.39951832726
+Construction of building for artificial insemination and breeding centers,12.765688433465597,0.0,1,350000.0000000001
+Construction of buildings for community cultural activities,12.765688433465597,0.5596157879354227,99,350000.0000000001
+Construction of buildings for crèches and anganwadies,14.004834209441615,0.35260875676578074,7,1208432.000000001
+Construction of buildings for multi-gym,12.866950565521332,0.25541281188299525,2,387298.33462074114
+Construction of buildings for sports facilities,13.122089339859471,0.6928731430150883,5,499863.00000000035
+Construction of bus-sheds or bus-stops,12.46821380818923,0.03931367053721413,114,259941.9999999999
+Construction of common work sheds/ common covered sitting area,12.594578081313305,0.30322073562136787,237,294955.0000000001
+Construction of community centers and community halls,13.116339268843245,0.5048015152049068,429,496997.0000000003
+Construction of culverts and bridges,13.813129726031827,0.40472975644659215,119,997622.0000000002
+"Construction of cycle tracks, cycle stand and segregated non-motorized vehicle (NMV) lanes",13.812753761490377,0.34581676673399997,13,997246.9999999991
+"Construction of flood control embankments/ protection walls along riverbanks, hilltops, roadsides",13.463905234057876,0.7274852578953492,44,703557.7446094947
+Construction of foot over bridge (FOB),12.649024488897242,0.7895254336470403,4,311459.46766794554
+Construction of footpaths and pedestrian ways,12.602228088071353,0.601986402162968,88,297220.06056119455
+Construction of night shelters for homeless,13.815510557964274,0.0,3,999999.9999999995
+Construction of public irrigation facilities,13.075342085632311,0.49358804741387097,20,477033.5417976389
+Construction of public libraries and reading rooms,13.810722985031745,0.2284964781585508,24,995223.869227422
+Construction of public staircase/ stair ghat for public convenience,13.830453290269144,0.034037889916752384,2,1015054.9330947571
+Construction of public toilets and bathrooms,13.010791601747224,0.9090383887727143,28,447213.5954999579
+Construction of rainwater harvesting structures,13.907177746490097,0.0,15,1095999.9999999993
+Construction of road under bridge,13.122363377404328,0.0010230459094691113,10,499999.9999999997
+"Construction of roads, link roads, pathways or any other road with or without drainage system",13.122363377404328,0.5199926878437111,2396,499999.9999999997
+"Construction of rooms and facilities for hospitals, FWC , PHC Centers and ANM centers",13.06856748546113,0.723974870317214,16,473812.7523822042
+Construction of rooms and halls in school and colleges,13.122363377404328,0.5132452152847584,159,499999.9999999997
+Construction of shelters for animals,13.120173589224674,0.752843605720086,6,498906.30382868496
+Construction of stadiums,13.46869440885903,0.45791030716805725,4,706935.2869959166
+Construction of toilet blocks,12.429216196844383,0.35667494393873156,35,249999.99999999983
+Construction of veterinary hospitals and dispensaries,13.812114798895093,0.0,1,996609.9999999992
+Construction of water tanks,13.789125377486481,0.6132594462991472,18,973959.8670222504
+Creation of new ponds,12.611537753638338,0.0,36,299999.9999999999
+Crematoriums/energy efficient crematoriums or structures on burial/cremation ground,12.897514455009505,0.22388337910879752,84,399318.43289535213
+Development of playfields and sports grounds,13.056219009169244,0.6270028123248608,20,467997.8632429851
+Development of playground,13.604789526648622,0.4824261492442936,31,810000.0000000002
+Development of public parks,12.89921982609012,0.643825625227235,29,400000.0000000002
+Establishing public ground water recharging facilities,12.86509713455567,0.8363190191600962,4,386581.1687084615
+Fitting of Sitting RCC Benches in Public Places,11.918390573078392,0.0,31,149999.99999999994
+Forest conservation infrastructure,13.70393878230717,0.11157177565710441,2,894427.1909999158
+Improvement of electricity distribution infrastructure,12.001425722007106,0.5023862223493492,91,162987.00000000015
+Installation of fixed garden gym equipment,12.611537753638338,0.28562495804204424,65,299999.9999999999
+Installation of multi-gym equipment,13.122295375092223,0.6856869164512585,31,499965.99999999965
+Installation/ Construction of Anti-Pollution structure,14.12615863131877,0.0,1,1364309.000000001
+Installing community drinking water plants,12.35799513048828,0.0012120015408765283,187,232814.0000000001
+Installing hand pumps,11.210819871852724,8.11655371588671e-05,234,73926.00000000006
+Installing tube-wells and borewells,12.296947948196266,0.19629137542274044,228,219026.48732972908
+Lighting of public spaces,12.208579500741354,0.18874005250529358,1675,200502.0
+"Patrolling Vehicles to government institution for Public Conveniences, Safety and Security",13.965209916774299,0.7863940003603105,3,1161485.0000000007
+Providing CCTV camera system for security of public areas,12.429216196844383,0.4084707229259079,72,249999.99999999983
+Providing drains and gutters for public drainage,13.042821372196212,0.4318739128681619,104,461769.6128482258
+Providing garbage collection and disposal systems,13.01066658611962,0.11169679128470911,2,447157.69030622736
+Providing supply pipelines for drinking water,12.422094900496761,0.5171003210887051,19,248225.9999999998
+Purchase Books for Library,11.512925464970229,0.0,77,100000.00000000001
+"Purchase of IT systems, including hardware and software for educational purposes",13.081541382884074,0.47612427245691347,50,480000.0000000003
+"Purchase of ambulances (Four, three and two wheelers)",14.690565477927866,0.9097767908488334,8,2399007.043728716
+Purchase of books and periodicals for libraries/digitization of library books,13.068595444676102,0.05126079247700588,102,473826.00000000006
+Purchase of books for public libraries/ digitization of library books,11.490986557451475,0.0,27,97830.00000000001
+Purchase of furniture and fixtures for educational purposes,13.815510557964274,0.4674788192626238,53,999999.9999999995
+"Purchase of hearse van (Four, three and two wheelers)",13.90918303382691,0.0,7,1098200.0000000005
+Purchase of hospital equipment,12.37159979579136,0.4379922569081067,43,236003.0000000002
+Purchase of immovable sports equipment,13.119992569258326,0.0023708081460025454,3,498815.99999999965
+Purchase of mobile sanitation equipment,12.958111343918311,0.05889151782819191,2,424264.06871192873
+Purchase of mobile water tankers,12.019899681580053,0.1748829911906391,330,166025.99999999994
+Purchase of motor boats for flood and cyclone prone areas,13.060445419589339,0.0,1,469979.9999999998
+Purchase of non-conventional energy system and devices for community use,13.122363377404328,0.0,35,499999.9999999997
+Purchase of other aids / devices required for P/ M/ V/ H impaired for differently abled persons,12.429216196844383,0.8363813486458529,9,249999.99999999983
+"Purchase of prosthetics, wheel chairs, tricycles (manual or motorized), elect scooties, hearing aids",11.461632170582678,0.0,60,95000.00000000006
+Purchase of sanitary pad vending machine and incinerators,14.22097566607244,0.0,1,1500000.000000001
+"Purchase of smart boards, visual display units and projectors",12.206072645530174,0.16126814759612174,125,200000.00000000006
+Purchase of sports equipment,13.345284503983992,0.0,7,624861.0000000003
+Purchase of vans and buses for educational institutions,14.690906262510683,0.05742367354103539,2,2399824.7276624157
+"Purchase of vehicle for mobile dispensaries (Four, three and two wheelers)",13.03171630837963,1.2039801035693678,3,456669.9999999996
+Purchase of vehicles for mobile libraries,15.561156278226305,0.0,1,5729599.999999996
+Renovation of ponds and lakes,13.038522967580072,0.42698521394173383,21,459788.9999999998
+Retrofitting in essential lifeline buildings,13.195419393393749,0.10881377210575494,2,537895.3983564093
+"Retrofitting, preservation or conservation of heritage and archaeological monuments and buildings",13.122363377404328,0.0,1,499999.9999999997
+Security gates in streets/public place for safety purpose,12.768119761105972,0.33890356426158874,3,350852.0
+Setting up of electric vehicle charging stations,12.499499435449483,0.0,1,268203.00000000006
+Setting up of farmers’ training and assistance centers,14.22097566607244,0.2876820724517799,3,1500000.000000001
+Setting up of kitchen and pantries,13.12215335535124,0.4161652492959078,5,499894.99999999977
+Setting up of laboratories,14.037853789107714,0.6838971648772141,145,1248999.9999999995
+Setting up public non-conventional energy plants,13.730784989618794,0.2447094874177198,2,918764.3878383618
+Street lights,12.31457272758764,0.7977403139631871,1627,222920.99999999994
+Tree plantation for community,14.22097566607244,0.40578615963969256,3,1500000.000000001
