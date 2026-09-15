@@ -364,3 +364,52 @@ export interface FinancialResponse {
   by_state: { state: string; total_amount: number; total_exp: number; utilization_pct: number; exposure: number }[];
   yearly_spending: { year: string; total_amount: number; flagged_amount: number; work_count: number }[];
 }
+
+// ── Human-in-the-Loop Feedback Types ─────────────────────────────────────────
+
+export type FeedbackLabel = 'agree' | 'too_high' | 'too_low' | 'false_positive';
+
+export interface FeedbackEntry {
+  id: number;
+  work_id: string;
+  reviewer: string;
+  human_label: FeedbackLabel;
+  corrected_score: number | null;
+  notes: string | null;
+  original_score: number;
+  created_at: string;
+}
+
+export interface FeedbackResponse {
+  total: number;
+  results: FeedbackEntry[];
+}
+
+export interface FeedbackStatsResponse {
+  total_feedback: number;
+  agreement_rate: number;
+  label_distribution: Record<string, number>;
+  top_reviewers: { reviewer: string; cnt: number }[];
+  recent_feedback: FeedbackEntry[];
+  min_samples_for_training: number;
+  can_train: boolean;
+}
+
+export interface ModelStatusResponse {
+  model_exists: boolean;
+  trained_at: string | null;
+  sample_count: number | null;
+  cv_mae: number | null;
+  cv_r2: number | null;
+  feature_columns?: string[];
+  error?: string;
+}
+
+export interface RetrainResponse {
+  ok: boolean;
+  sample_count: number;
+  cv_mae: number | null;
+  cv_r2: number | null;
+  model_path: string;
+  trained_at: string;
+}

@@ -20,6 +20,7 @@ import secrets
 import hashlib
 from typing import Optional
 from collections import defaultdict
+from datetime import datetime as _datetime_cls
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -70,6 +71,14 @@ class AuditEntry(BaseModel):
     work_id: str
     action: str   # e.g. "dossier_opened", "brief_generated", "exported"
     authority: str = "analyst"
+
+
+class FeedbackRequest(BaseModel):
+    work_id: str
+    reviewer: str
+    human_label: str   # 'agree' | 'too_high' | 'too_low' | 'false_positive'
+    corrected_score: Optional[float] = None  # 0-100
+    notes: str = ""
 
 def _tokenize(text: str) -> list[str]:
     return re.findall(r'[a-z]+', (text or '').lower())
@@ -193,6 +202,28 @@ def _cosine(v1: dict, v2: dict) -> float:
 @app.on_event("startup")
 def startup_event():
     _build_tfidf_index()
+    _ensure_feedback_table()
+
+
+def _ensure_feedback_table():
+    """Create the feedback table if it doesn't exist (idempotent)."""
+    conn = sqlite3.connect(DB_PATH)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS feedback (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            work_id         TEXT NOT NULL,
+            reviewer        TEXT NOT NULL,
+            human_label     TEXT NOT NULL,
+            corrected_score REAL,
+            notes           TEXT,
+            original_score  REAL,
+            created_at      TEXT NOT NULL
+        )
+    """)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_feedback_work ON feedback(work_id)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_feedback_reviewer ON feedback(reviewer)")
+    conn.commit()
+    conn.close()
 
 
 def rows_to_dicts(rows):
@@ -1888,6 +1919,259 @@ async def chat(req: ChatRequest):
         yield "data: [DONE]\n\n"
 
     return StreamingResponse(stream(), media_type="text/event-stream")
+
+
+# ── Human-in-the-Loop Feedback ────────────────────────────────────────────────
+
+MIN_FEEDBACK_SAMPLES = 30  # minimum human reviews before model training is allowed
+FEEDBACK_MODEL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "feedback_model.joblib")
+
+FEATURE_COLUMNS = [
+    "fin_score", "rec_delay_score", "stall_score", "unaccounted_score",
+    "phantom_score", "dup_score", "calamity_score",
+    "cost_ratio", "conc_ratio", "portfolio_share",
+]
+
+
+@app.post("/api/feedback")
+def submit_feedback(req: FeedbackRequest):
+    """Submit human feedback for a work's risk score."""
+    if req.human_label not in ("agree", "too_high", "too_low", "false_positive"):
+        raise HTTPException(400, "human_label must be one of: agree, too_high, too_low, false_positive")
+    if req.corrected_score is not None and not (0 <= req.corrected_score <= 100):
+        raise HTTPException(400, "corrected_score must be between 0 and 100")
+
+    conn = get_conn()
+    try:
+        row = conn.execute("SELECT risk_score FROM works WHERE work_id = ?", (req.work_id,)).fetchone()
+        if not row:
+            raise HTTPException(404, f"work_id '{req.work_id}' not found")
+        original_score = row["risk_score"]
+
+        conn.execute(
+            """INSERT INTO feedback (work_id, reviewer, human_label, corrected_score, notes, original_score, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (req.work_id, req.reviewer, req.human_label, req.corrected_score,
+             req.notes, original_score, _datetime_cls.utcnow().isoformat() + "Z"),
+        )
+        conn.commit()
+        return {"ok": True, "original_score": original_score}
+    finally:
+        conn.close()
+
+
+@app.get("/api/feedback")
+def list_feedback(
+    work_id: Optional[str] = None,
+    reviewer: Optional[str] = None,
+    limit: int = Query(50, ge=1, le=500),
+):
+    """List feedback entries, optionally filtered by work_id or reviewer."""
+    conn = get_conn()
+    try:
+        where, params = ["1=1"], []
+        if work_id:
+            where.append("work_id = ?"); params.append(work_id)
+        if reviewer:
+            where.append("reviewer = ?"); params.append(reviewer)
+        where_sql = " AND ".join(where)
+        rows = conn.execute(
+            f"""SELECT id, work_id, reviewer, human_label, corrected_score, notes,
+                       original_score, created_at
+                FROM feedback WHERE {where_sql}
+                ORDER BY created_at DESC LIMIT ?""",
+            params + [limit],
+        ).fetchall()
+        return {"total": len(rows), "results": rows_to_dicts(rows)}
+    finally:
+        conn.close()
+
+
+@app.get("/api/feedback/stats")
+def feedback_stats():
+    """Aggregated feedback statistics for the admin dashboard."""
+    conn = get_conn()
+    try:
+        total_row = conn.execute("SELECT COUNT(*) AS cnt FROM feedback").fetchone()
+        total = total_row["cnt"] if total_row else 0
+
+        label_dist = conn.execute(
+            "SELECT human_label, COUNT(*) AS cnt FROM feedback GROUP BY human_label"
+        ).fetchall()
+
+        reviewer_counts = conn.execute(
+            "SELECT reviewer, COUNT(*) AS cnt FROM feedback GROUP BY reviewer ORDER BY cnt DESC LIMIT 20"
+        ).fetchall()
+
+        recent = conn.execute(
+            """SELECT id, work_id, reviewer, human_label, corrected_score, original_score, created_at
+               FROM feedback ORDER BY created_at DESC LIMIT 10"""
+        ).fetchall()
+
+        agreement_row = conn.execute(
+            "SELECT COUNT(*) AS cnt FROM feedback WHERE human_label = 'agree'"
+        ).fetchone()
+        agreement_count = agreement_row["cnt"] if agreement_row else 0
+        agreement_rate = round(agreement_count / total * 100, 1) if total > 0 else 0.0
+
+        return {
+            "total_feedback": total,
+            "agreement_rate": agreement_rate,
+            "label_distribution": {r["human_label"]: r["cnt"] for r in label_dist},
+            "top_reviewers": rows_to_dicts(reviewer_counts),
+            "recent_feedback": rows_to_dicts(recent),
+            "min_samples_for_training": MIN_FEEDBACK_SAMPLES,
+            "can_train": total >= MIN_FEEDBACK_SAMPLES,
+        }
+    finally:
+        conn.close()
+
+
+@app.get("/api/feedback/{work_id:path}")
+def get_work_feedback(work_id: str):
+    """Get all feedback for a specific work."""
+    conn = get_conn()
+    try:
+        rows = conn.execute(
+            """SELECT id, work_id, reviewer, human_label, corrected_score, notes,
+                      original_score, created_at
+               FROM feedback WHERE work_id = ?
+               ORDER BY created_at DESC""",
+            (work_id,),
+        ).fetchall()
+        return {"work_id": work_id, "total": len(rows), "results": rows_to_dicts(rows)}
+    finally:
+        conn.close()
+
+
+def _compute_target_score(human_label: str, original_score: float, corrected_score: float | None) -> float:
+    """Derive a numeric target score from human feedback."""
+    if corrected_score is not None:
+        return corrected_score
+    if human_label == "agree":
+        return original_score
+    if human_label == "too_high":
+        return original_score * 0.5
+    if human_label == "too_low":
+        return min(original_score * 1.5, 100.0)
+    if human_label == "false_positive":
+        return 0.0
+    return original_score
+
+
+@app.post("/api/feedback/retrain")
+def retrain_model():
+    """Train a supervised model from collected human feedback. Admin-only."""
+    import numpy as np
+
+    conn = get_conn()
+    try:
+        # Gather feedback with work features
+        feedback_rows = conn.execute(
+            """SELECT f.work_id, f.human_label, f.corrected_score, f.original_score,
+                      w.fin_score, w.rec_delay_score, w.stall_score, w.unaccounted_score,
+                      w.phantom_score, w.dup_score, w.calamity_score,
+                      w.cost_ratio, w.conc_ratio, w.portfolio_share, w.amount
+               FROM feedback f
+               JOIN works w ON f.work_id = w.work_id"""
+        ).fetchall()
+
+        if len(feedback_rows) < MIN_FEEDBACK_SAMPLES:
+            raise HTTPException(
+                400,
+                f"Need at least {MIN_FEEDBACK_SAMPLES} feedback samples to train. "
+                f"Currently have {len(feedback_rows)}.",
+            )
+
+        # Build feature matrix and target vector
+        X_list = []
+        y_list = []
+        for row in feedback_rows:
+            features = []
+            for col in FEATURE_COLUMNS:
+                val = row[col]
+                features.append(float(val) if val is not None else 0.0)
+            # Add log(amount) as a feature
+            amt = row["amount"] or 0
+            features.append(math.log1p(max(amt, 0)))
+            X_list.append(features)
+
+            target = _compute_target_score(row["human_label"], row["original_score"], row["corrected_score"])
+            y_list.append(target)
+
+        X = np.array(X_list)
+        y = np.array(y_list)
+
+        # Train GradientBoostingRegressor
+        from sklearn.ensemble import GradientBoostingRegressor
+        from sklearn.model_selection import cross_val_score
+        import joblib
+
+        model = GradientBoostingRegressor(
+            n_estimators=100,
+            max_depth=4,
+            learning_rate=0.1,
+            min_samples_leaf=3,
+            random_state=42,
+        )
+        model.fit(X, y)
+
+        # Cross-validation metrics (if enough samples)
+        cv_mae = None
+        cv_r2 = None
+        if len(X) >= 10:
+            mae_scores = cross_val_score(model, X, y, cv=min(5, len(X)), scoring="neg_mean_absolute_error")
+            r2_scores = cross_val_score(model, X, y, cv=min(5, len(X)), scoring="r2")
+            cv_mae = round(float(-mae_scores.mean()), 2)
+            cv_r2 = round(float(r2_scores.mean()), 3)
+
+        # Save model with metadata
+        model_data = {
+            "model": model,
+            "feature_columns": FEATURE_COLUMNS + ["amount_log"],
+            "trained_at": _datetime_cls.utcnow().isoformat() + "Z",
+            "sample_count": len(X),
+            "cv_mae": cv_mae,
+            "cv_r2": cv_r2,
+        }
+        joblib.dump(model_data, FEEDBACK_MODEL_PATH)
+
+        return {
+            "ok": True,
+            "sample_count": len(X),
+            "cv_mae": cv_mae,
+            "cv_r2": cv_r2,
+            "model_path": FEEDBACK_MODEL_PATH,
+            "trained_at": model_data["trained_at"],
+        }
+    finally:
+        conn.close()
+
+
+@app.get("/api/feedback/model-status")
+def model_status():
+    """Check if a trained feedback model exists and its metadata."""
+    if not os.path.exists(FEEDBACK_MODEL_PATH):
+        return {
+            "model_exists": False,
+            "trained_at": None,
+            "sample_count": None,
+            "cv_mae": None,
+            "cv_r2": None,
+        }
+    try:
+        import joblib
+        data = joblib.load(FEEDBACK_MODEL_PATH)
+        return {
+            "model_exists": True,
+            "trained_at": data.get("trained_at"),
+            "sample_count": data.get("sample_count"),
+            "cv_mae": data.get("cv_mae"),
+            "cv_r2": data.get("cv_r2"),
+            "feature_columns": data.get("feature_columns"),
+        }
+    except Exception as e:
+        return {"model_exists": False, "error": str(e)}
 
 
 @app.get("/")

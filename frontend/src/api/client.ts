@@ -325,3 +325,61 @@ export async function authMe(token: string): Promise<AuthSession & { token: stri
   const data = await r.json();
   return { ...data, token };
 }
+
+// ── Feedback / Human-in-the-Loop ─────────────────────────────────────────────
+
+import type {
+  FeedbackResponse,
+  FeedbackStatsResponse,
+  ModelStatusResponse,
+  RetrainResponse,
+  FeedbackLabel,
+} from '../types';
+
+export async function submitFeedback(
+  workId: string,
+  reviewer: string,
+  humanLabel: FeedbackLabel,
+  correctedScore?: number | null,
+  notes?: string,
+): Promise<{ ok: boolean; original_score: number }> {
+  const response = await fetch(`${BASE_URL}/api/feedback`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      work_id: workId,
+      reviewer,
+      human_label: humanLabel,
+      corrected_score: correctedScore ?? null,
+      notes: notes || '',
+    }),
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!response.ok) throw new Error(`Feedback submission failed: ${response.status}`);
+  return response.json();
+}
+
+export async function getWorkFeedback(workId: string): Promise<FeedbackResponse> {
+  return apiGet<FeedbackResponse>(`/api/feedback/${encodeURIComponent(workId)}`);
+}
+
+export async function getFeedbackStats(): Promise<FeedbackStatsResponse> {
+  return apiGet<FeedbackStatsResponse>('/api/feedback/stats');
+}
+
+export async function getModelStatus(): Promise<ModelStatusResponse> {
+  return apiGet<ModelStatusResponse>('/api/feedback/model-status');
+}
+
+export async function retrainModel(): Promise<RetrainResponse> {
+  const response = await fetch(`${BASE_URL}/api/feedback/retrain`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    signal: AbortSignal.timeout(60000),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error((err as any).detail || `Retrain failed: ${response.status}`);
+  }
+  return response.json();
+}

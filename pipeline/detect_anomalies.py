@@ -773,6 +773,48 @@ def build_scored_works(rec, san, comp, exp, cal):
     else:
         universe["risk_score"] = 0.0
 
+    # ── Human-in-the-loop model blending ──────────────────────────────────
+    # If a supervised model trained on human feedback exists, blend its
+    # predictions with the heuristic score (default 70% heuristic, 30% model).
+    FEEDBACK_WEIGHT = 0.3
+    MODEL_PATH = os.path.join(ROOT, "backend", "feedback_model.joblib")
+    universe["model_adjusted"] = False
+
+    if os.path.exists(MODEL_PATH):
+        try:
+            import joblib
+            model_data = joblib.load(MODEL_PATH)
+            model = model_data["model"]
+            feat_cols = model_data.get("feature_columns", [])
+            print(f"  ✓ Feedback model found (trained on {model_data.get('sample_count', '?')} samples)")
+
+            # Build the feature matrix matching what the model was trained on
+            _FEAT_COLS = [
+                "fin_score", "rec_delay_score", "stall_score", "unaccounted_score",
+                "phantom_score", "dup_score", "calamity_score",
+                "cost_ratio", "conc_ratio", "portfolio_share",
+            ]
+            X = pd.DataFrame()
+            for col in _FEAT_COLS:
+                X[col] = pd.to_numeric(universe.get(col, 0), errors="coerce").fillna(0.0)
+            X["amount_log"] = np.log1p(universe["Amount"].clip(lower=0).fillna(0))
+
+            model_scores = model.predict(X.values)
+            model_scores = np.clip(model_scores, 0, 100)
+
+            heuristic = universe["risk_score"].values
+            blended = (1 - FEEDBACK_WEIGHT) * heuristic + FEEDBACK_WEIGHT * model_scores
+            universe["risk_score"] = np.clip(blended, 0, 100).round(2)
+            universe["model_adjusted"] = True
+
+            diff = np.abs(heuristic - universe["risk_score"].values)
+            adjusted_count = (diff > 0.5).sum()
+            print(f"  ✓ Blended scores: {adjusted_count:,} works adjusted (weight={FEEDBACK_WEIGHT})")
+        except Exception as e:
+            print(f"  ✗ Feedback model load/predict failed: {e} — using heuristic scores only")
+    else:
+        print("  ℹ No feedback model found — using pure heuristic scores")
+
     universe["risk_level"] = universe["risk_score"].apply(classify_risk)
     universe["reason"] = universe.apply(lambda r: build_reason(r.to_dict()), axis=1)
 
@@ -853,7 +895,8 @@ def write_db(universe, mp_summary, conc_mp_df):
             phantom_score       REAL,
             phantom_days        REAL,
             has_image           INTEGER,
-            work_description    TEXT
+            work_description    TEXT,
+            model_adjusted      INTEGER DEFAULT 0
         )
     """)
 
@@ -941,8 +984,9 @@ def write_db(universe, mp_summary, conc_mp_df):
             safe(r.get("phantom_days")),
             int(bool(r.get("has_image", False))),
             str(r.get("Work_Description", ""))[:500] if r.get("Work_Description") else None,
+            int(bool(r.get("model_adjusted", False))),
         ))
-    c.executemany("INSERT OR REPLACE INTO works VALUES " + "(?" + ",?" * 34 + ")", rows)
+    c.executemany("INSERT OR REPLACE INTO works VALUES (" + ",".join(["?"] * 36) + ")", rows)
 
     for _, r in mp_summary.iterrows():
         c.execute("INSERT OR REPLACE INTO mp_summary VALUES (?,?,?,?,?,?,?,?,?,?,?)", (

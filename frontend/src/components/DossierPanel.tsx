@@ -6,6 +6,7 @@ import type { Project, PeerResponse, TransactionsResponse, BriefResponse, LLMRis
 import { fmtInr, riskColor, riskTier, severityBadgeClass, safeFloat, clamp } from '../utils/format';
 import { InvestigationNotes } from './InvestigationNotes';
 import { DescriptionQualityBadge } from './DescriptionQualityBadge';
+import { FeedbackPanel } from './FeedbackPanel';
 import { appendAuditLog, getExportReportUrl } from '../api/client';
 
 interface DossierPanelProps {
@@ -382,6 +383,9 @@ function DossierContent({ workId, onClose, canGenerateBrief = true, canRunLLMAss
             </div>
             <div className="dossier-section">
               <DescriptionQualityBadge workId={workId} />
+            </div>
+            <div className="dossier-section">
+              <FeedbackPanel workId={workId} currentScore={score} reviewer="analyst" />
             </div>
             {canGenerateBrief && <InvestigationBrief workId={workId} />}
             {canRunLLMAssessment && <LLMAssessmentCard workId={workId} />}

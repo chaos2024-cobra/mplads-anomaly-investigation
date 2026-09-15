@@ -16,6 +16,7 @@ import { TrendPanel } from './components/TrendPanel';
 import { EarlyWarningPanel } from './components/EarlyWarningPanel';
 import { VendorPatternsPanel } from './components/VendorPatternsPanel';
 import { AuditLogPanel } from './components/AuditLogPanel';
+import { FeedbackAdmin } from './components/FeedbackAdmin';
 import { ExportButton } from './components/ExportButton';
 import { ComplianceMonitor } from './components/ComplianceMonitor';
 import { MpAnalytics } from './components/MpAnalytics';
@@ -511,8 +512,12 @@ function AuthenticatedApp({ session, onLogout }: { session: AuthSession; onLogou
             </>
           )}
 
-          {/* ── Data & system ────────────────────────────── */}
-          {activeView === 'system' && <AuditLogPanel />}
+          {activeView === 'system' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+              <FeedbackAdmin />
+              <AuditLogPanel />
+            </div>
+          )}
 
           {activeView !== 'overview' && <FooterBanner />}
         </main>
