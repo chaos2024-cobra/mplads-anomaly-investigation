@@ -523,7 +523,7 @@ function AuthenticatedApp({ session, onLogout }: { session: AuthSession; onLogou
         </main>
       </div>
 
-      <DossierPanel workId={selectedWorkId} onClose={closeDossier} canGenerateBrief={perms.canGenerateBrief} canRunLLMAssessment={perms.canRunLLMAssessment} canExport={perms.canExport} />
+      <DossierPanel workId={selectedWorkId} onClose={closeDossier} canGenerateBrief={perms.canGenerateBrief} canRunLLMAssessment={perms.canRunLLMAssessment} canExport={perms.canExport} reviewer={session.username} />
 
       {perms.canPrioritize && showPrioritize && selectedIds.size >= 2 && (
         <PrioritizeModal

@@ -12,6 +12,9 @@ frontend/.env.local
 # Node
 frontend/node_modules/
 frontend/dist/
+node_modules/
+build/
+dist/
 
 # Streamlit
 .streamlit/secrets.toml
@@ -30,3 +33,9 @@ Thumbs.db
 # Generated caches / outputs
 .pytest_cache/
 .mypy_cache/
+*.parquet
+*.grib
+*.grib2
+*.nc
+*.nc4
+*.zarr

@@ -786,7 +786,7 @@ def build_scored_works(rec, san, comp, exp, cal):
             model_data = joblib.load(MODEL_PATH)
             model = model_data["model"]
             feat_cols = model_data.get("feature_columns", [])
-            print(f"  ✓ Feedback model found (trained on {model_data.get('sample_count', '?')} samples)")
+            print(f"  [+] Feedback model found (trained on {model_data.get('sample_count', '?')} samples)")
 
             # Build the feature matrix matching what the model was trained on
             _FEAT_COLS = [
@@ -803,15 +803,16 @@ def build_scored_works(rec, san, comp, exp, cal):
             model_scores = np.clip(model_scores, 0, 100)
 
             heuristic = universe["risk_score"].values
+            universe["heuristic_score"] = heuristic.copy()
             blended = (1 - FEEDBACK_WEIGHT) * heuristic + FEEDBACK_WEIGHT * model_scores
             universe["risk_score"] = np.clip(blended, 0, 100).round(2)
             universe["model_adjusted"] = True
 
             diff = np.abs(heuristic - universe["risk_score"].values)
             adjusted_count = (diff > 0.5).sum()
-            print(f"  ✓ Blended scores: {adjusted_count:,} works adjusted (weight={FEEDBACK_WEIGHT})")
+            print(f"  [+] Blended scores: {adjusted_count:,} works adjusted (weight={FEEDBACK_WEIGHT})")
         except Exception as e:
-            print(f"  ✗ Feedback model load/predict failed: {e} — using heuristic scores only")
+            print(f"  [-] Feedback model load/predict failed: {e} — using heuristic scores only")
     else:
         print("  ℹ No feedback model found — using pure heuristic scores")
 
@@ -896,7 +897,8 @@ def write_db(universe, mp_summary, conc_mp_df):
             phantom_days        REAL,
             has_image           INTEGER,
             work_description    TEXT,
-            model_adjusted      INTEGER DEFAULT 0
+            model_adjusted      INTEGER DEFAULT 0,
+            heuristic_score     REAL
         )
     """)
 
@@ -985,8 +987,9 @@ def write_db(universe, mp_summary, conc_mp_df):
             int(bool(r.get("has_image", False))),
             str(r.get("Work_Description", ""))[:500] if r.get("Work_Description") else None,
             int(bool(r.get("model_adjusted", False))),
+            safe(r.get("heuristic_score", r.get("risk_score", 0.0)), 0.0),
         ))
-    c.executemany("INSERT OR REPLACE INTO works VALUES (" + ",".join(["?"] * 36) + ")", rows)
+    c.executemany("INSERT OR REPLACE INTO works VALUES (" + ",".join(["?"] * 37) + ")", rows)
 
     for _, r in mp_summary.iterrows():
         c.execute("INSERT OR REPLACE INTO mp_summary VALUES (?,?,?,?,?,?,?,?,?,?,?)", (

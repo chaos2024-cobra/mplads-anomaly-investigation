@@ -61,6 +61,7 @@ export function FeedbackPanel({ workId, currentScore, reviewer }: FeedbackPanelP
   };
 
   const showSlider = selectedLabel === 'too_high' || selectedLabel === 'too_low';
+  const hasRated = history.some(fb => fb.reviewer === reviewer) || submitted;
 
   return (
     <div style={{
@@ -109,7 +110,7 @@ export function FeedbackPanel({ workId, currentScore, reviewer }: FeedbackPanelP
       {expanded && (
         <div style={{ padding: '0 16px 16px' }}>
           {/* Submission form */}
-          {!submitted ? (
+          {!hasRated ? (
             <>
               <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 12px' }}>
                 Current risk score: <strong>{currentScore.toFixed(1)}</strong>/100.
@@ -158,32 +159,36 @@ export function FeedbackPanel({ workId, currentScore, reviewer }: FeedbackPanelP
               </div>
 
               {/* Corrected score slider */}
-              {showSlider && (
-                <div style={{
-                  background: '#fff',
-                  border: '1px solid #e2e8f0',
-                  borderRadius: 8,
-                  padding: 12,
-                  marginBottom: 12,
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                    <span style={{ fontSize: 12, color: '#6b7280' }}>Suggested corrected score:</span>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: '#1e3a5f' }}>{correctedScore}</span>
+              {showSlider && (() => {
+                const sliderMin = selectedLabel === 'too_low' ? Math.round(currentScore) : 0;
+                const sliderMax = selectedLabel === 'too_high' ? Math.round(currentScore) : 100;
+                return (
+                  <div style={{
+                    background: '#fff',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: 8,
+                    padding: 12,
+                    marginBottom: 12,
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <span style={{ fontSize: 12, color: '#6b7280' }}>Suggested corrected score:</span>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: '#1e3a5f' }}>{correctedScore}</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={sliderMin}
+                      max={sliderMax}
+                      value={correctedScore}
+                      onChange={e => setCorrectedScore(Number(e.target.value))}
+                      style={{ width: '100%', accentColor: '#1e3a5f' }}
+                    />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#9ca3af' }}>
+                      <span>{sliderMin} {sliderMin === 0 ? '— No Risk' : '(Current)'}</span>
+                      <span>{sliderMax} {sliderMax === 100 ? '— Critical' : '(Current)'}</span>
+                    </div>
                   </div>
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    value={correctedScore}
-                    onChange={e => setCorrectedScore(Number(e.target.value))}
-                    style={{ width: '100%', accentColor: '#1e3a5f' }}
-                  />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: '#9ca3af' }}>
-                    <span>0 — No Risk</span>
-                    <span>100 — Critical</span>
-                  </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* Notes textarea */}
               <textarea
@@ -244,22 +249,7 @@ export function FeedbackPanel({ workId, currentScore, reviewer }: FeedbackPanelP
               fontSize: 14,
               fontWeight: 600,
             }}>
-              ✓ Feedback submitted successfully
-              <button
-                onClick={() => { setSubmitted(false); setSelectedLabel(null); setNotes(''); }}
-                style={{
-                  display: 'block',
-                  margin: '8px auto 0',
-                  background: 'none',
-                  border: 'none',
-                  color: '#1e3a5f',
-                  fontSize: 12,
-                  cursor: 'pointer',
-                  textDecoration: 'underline',
-                }}
-              >
-                Submit another review
-              </button>
+              ✓ You have reviewed this work
             </div>
           )}
 

@@ -1943,6 +1943,11 @@ def submit_feedback(req: FeedbackRequest):
 
     conn = get_conn()
     try:
+        # Check if user already reviewed
+        existing = conn.execute("SELECT id FROM feedback WHERE work_id = ? AND reviewer = ?", (req.work_id, req.reviewer)).fetchone()
+        if existing:
+            raise HTTPException(400, "You have already submitted feedback for this work.")
+
         row = conn.execute("SELECT risk_score FROM works WHERE work_id = ?", (req.work_id,)).fetchone()
         if not row:
             raise HTTPException(404, f"work_id '{req.work_id}' not found")

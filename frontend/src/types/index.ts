@@ -51,6 +51,8 @@ export interface Project {
   portfolio_share?: number | null;
   has_image?: number | null;
   dup_pair?: string | null;
+  model_adjusted?: boolean;
+  heuristic_score?: number;
 }
 
 export interface Evidence {

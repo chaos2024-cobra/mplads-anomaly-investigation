@@ -15,9 +15,10 @@ interface DossierPanelProps {
   canGenerateBrief?: boolean;
   canRunLLMAssessment?: boolean;
   canExport?: boolean;
+  reviewer: string;
 }
 
-export function DossierPanel({ workId, onClose, canGenerateBrief = true, canRunLLMAssessment = true, canExport = true }: DossierPanelProps) {
+export function DossierPanel({ workId, onClose, canGenerateBrief = true, canRunLLMAssessment = true, canExport = true, reviewer }: DossierPanelProps) {
   const isOpen = workId !== null;
 
   useEffect(() => {
@@ -37,7 +38,7 @@ export function DossierPanel({ workId, onClose, canGenerateBrief = true, canRunL
         aria-hidden={!isOpen}
       />
       <div className={`drawer ${isOpen ? 'open' : ''}`} role="dialog" aria-modal="true" aria-label="Investigation dossier">
-        {isOpen && workId && <DossierContent workId={workId} onClose={onClose} canGenerateBrief={canGenerateBrief} canRunLLMAssessment={canRunLLMAssessment} canExport={canExport} />}
+        {isOpen && workId && <DossierContent workId={workId} onClose={onClose} canGenerateBrief={canGenerateBrief} canRunLLMAssessment={canRunLLMAssessment} canExport={canExport} reviewer={reviewer} />}
       </div>
     </>
   );
@@ -58,7 +59,7 @@ const TABS: { id: DossierTab; label: string }[] = [
   { id: 'ai', label: '✦ Ask AI' },
 ];
 
-function DossierContent({ workId, onClose, canGenerateBrief = true, canRunLLMAssessment = true, canExport = true }: { workId: string; onClose: () => void; canGenerateBrief?: boolean; canRunLLMAssessment?: boolean; canExport?: boolean }) {
+function DossierContent({ workId, onClose, canGenerateBrief = true, canRunLLMAssessment = true, canExport = true, reviewer }: { workId: string; onClose: () => void; canGenerateBrief?: boolean; canRunLLMAssessment?: boolean; canExport?: boolean; reviewer: string }) {
   const { data: detail, loading, error } = useApi(
     () => getWorkDetail(workId),
     [workId]
@@ -67,6 +68,7 @@ function DossierContent({ workId, onClose, canGenerateBrief = true, canRunLLMAss
   const [peers, setPeers] = useState<PeerResponse | null>(null);
   const [txns, setTxns] = useState<TransactionsResponse | null>(null);
   const [activeTab, setActiveTab] = useState<DossierTab>('overview');
+  const [scoreMode, setScoreMode] = useState<'ml' | 'base'>('ml');
 
   useEffect(() => {
     if (!workId) return;
@@ -116,7 +118,10 @@ function DossierContent({ workId, onClose, canGenerateBrief = true, canRunLLMAss
     );
   }
 
-  const score = safeFloat(detail.risk_score, 0);
+  const hasML = detail.model_adjusted && detail.heuristic_score !== undefined && detail.heuristic_score !== null;
+  const score = hasML && scoreMode === 'base'
+    ? safeFloat(detail.heuristic_score, 0)
+    : safeFloat(detail.risk_score, 0);
   const level = detail.risk_level || 'Low - Normal Pattern';
   const tc = riskColor(score);
   const tt = riskTier(score);
@@ -301,6 +306,43 @@ function DossierContent({ workId, onClose, canGenerateBrief = true, canRunLLMAss
           <span style={{ fontFamily: 'var(--mono)', fontSize: '0.72rem', fontWeight: 700, color: tc }}>
             SCORE {Math.round(score)}
           </span>
+          {hasML && (
+            <div style={{
+              display: 'flex',
+              background: '#e2e8f0',
+              borderRadius: 20,
+              padding: 2,
+              marginLeft: 8,
+              cursor: 'pointer',
+              userSelect: 'none',
+              border: '1px solid #cbd5e1'
+            }} onClick={() => setScoreMode(scoreMode === 'ml' ? 'base' : 'ml')} title="Toggle between raw heuristic rules and human-feedback ML model">
+              <div style={{
+                padding: '2px 8px',
+                borderRadius: 16,
+                fontSize: '0.65rem',
+                fontWeight: 700,
+                color: scoreMode === 'ml' ? '#fff' : '#64748b',
+                background: scoreMode === 'ml' ? 'linear-gradient(135deg, #1e3a5f, #3b82f6)' : 'transparent',
+                boxShadow: scoreMode === 'ml' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
+                transition: 'all 0.2s ease',
+              }}>
+                ✨ ML
+              </div>
+              <div style={{
+                padding: '2px 8px',
+                borderRadius: 16,
+                fontSize: '0.65rem',
+                fontWeight: 700,
+                color: scoreMode === 'base' ? '#1e3a5f' : '#64748b',
+                background: scoreMode === 'base' ? '#fff' : 'transparent',
+                boxShadow: scoreMode === 'base' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
+                transition: 'all 0.2s ease',
+              }}>
+                BASE
+              </div>
+            </div>
+          )}
         </div>
         <div className="dossier-header-actions">
           <button
@@ -385,7 +427,7 @@ function DossierContent({ workId, onClose, canGenerateBrief = true, canRunLLMAss
               <DescriptionQualityBadge workId={workId} />
             </div>
             <div className="dossier-section">
-              <FeedbackPanel workId={workId} currentScore={score} reviewer="analyst" />
+              <FeedbackPanel workId={workId} currentScore={score} reviewer={reviewer} />
             </div>
             {canGenerateBrief && <InvestigationBrief workId={workId} />}
             {canRunLLMAssessment && <LLMAssessmentCard workId={workId} />}
