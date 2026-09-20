@@ -705,29 +705,49 @@ def mp_analytics(
                 "top_risk_works": rows_to_dicts(top_risk),
             }
         else:
-            # Leaderboard: all MPs ordered by avg_risk_score DESC.
-            # Default limit (500) comfortably covers every MP in the dataset;
+            # Leaderboard: EVERY MP (all ~543), ordered by risk.
+            #
+            # Source from mp_summary (one row per allocated MP) and LEFT JOIN the
+            # per-MP works aggregate. MPs with scored works get their computed
+            # metrics; allocation-only MPs (no works yet) fall through to zeros
+            # via COALESCE instead of being dropped, which is why the old
+            # `FROM works GROUP BY ...` form only ever returned the ~265 MPs
+            # that had works. Default limit (1000) covers the full roster;
             # callers can override via ?limit= up to 2000.
             rows = conn.execute(
-                """SELECT mp_name, state, constituency,
-                          COUNT(*) AS total_works,
-                          SUM(amount) AS total_amount,
-                          SUM(CASE WHEN risk_score >= 20 THEN 1 ELSE 0 END) AS flagged_count,
-                          SUM(CASE WHEN risk_score >= 75 THEN 1 ELSE 0 END) AS critical_count,
-                          ROUND(AVG(risk_score), 2) AS avg_risk_score,
+                """SELECT s.mp_name, s.state, s.constituency,
+                          COALESCE(w.total_works, 0) AS total_works,
+                          COALESCE(w.total_amount, 0) AS total_amount,
+                          COALESCE(w.flagged_count, 0) AS flagged_count,
+                          COALESCE(w.critical_count, 0) AS critical_count,
+                          ROUND(COALESCE(w.avg_risk_score, 0), 2) AS avg_risk_score,
                           ROUND(
-                            CASE WHEN SUM(amount) > 0
-                                 THEN SUM(total_exp) * 100.0 / SUM(amount)
+                            CASE WHEN COALESCE(w.total_amount, 0) > 0
+                                 THEN w.total_exp * 100.0 / w.total_amount
                                  ELSE 0 END,
                           2) AS utilization_pct,
                           ROUND(
-                            CASE WHEN COUNT(*) > 0
-                                 THEN SUM(CASE WHEN pipeline_stage = 'Completed' THEN 1 ELSE 0 END) * 100.0 / COUNT(*)
+                            CASE WHEN COALESCE(w.total_works, 0) > 0
+                                 THEN w.completed_works * 100.0 / w.total_works
                                  ELSE 0 END,
                           2) AS completion_rate
-                   FROM works
-                   GROUP BY mp_name, state, constituency
-                   ORDER BY avg_risk_score DESC
+                   FROM mp_summary s
+                   LEFT JOIN (
+                       SELECT mp_name, state, constituency,
+                              COUNT(*) AS total_works,
+                              SUM(amount) AS total_amount,
+                              SUM(total_exp) AS total_exp,
+                              SUM(CASE WHEN risk_score >= 20 THEN 1 ELSE 0 END) AS flagged_count,
+                              SUM(CASE WHEN risk_score >= 75 THEN 1 ELSE 0 END) AS critical_count,
+                              AVG(risk_score) AS avg_risk_score,
+                              SUM(CASE WHEN pipeline_stage = 'Completed' THEN 1 ELSE 0 END) AS completed_works
+                       FROM works
+                       GROUP BY mp_name, state, constituency
+                   ) w
+                     ON w.mp_name = s.mp_name
+                    AND w.state IS s.state
+                    AND w.constituency IS s.constituency
+                   ORDER BY avg_risk_score DESC, total_works DESC
                    LIMIT ?""",
                 (limit,),
             ).fetchall()

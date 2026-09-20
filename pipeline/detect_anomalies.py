@@ -825,6 +825,7 @@ def build_scored_works(rec, san, comp, exp, cal):
 # ─── mp summary ───────────────────────────────────────────────────────────────
 
 def build_mp_summary(universe, allocated, exp):
+    # Works-based aggregate: only MPs that have scored works appear here (~265).
     agg = universe.groupby(["MP_Name", "State", "Constituency"]).agg(
         total_works=("Work_ID", "count"),
         total_amount=("Amount", "sum"),
@@ -836,11 +837,26 @@ def build_mp_summary(universe, allocated, exp):
         exp.groupby("MP_Name")["Fund_Disbursed"].sum().reset_index()
         .rename(columns={"Fund_Disbursed": "total_fund_utilized"})
     )
-    summary = agg.merge(exp_agg, on="MP_Name", how="left")
-    summary = summary.merge(
-        allocated[["MP_Name", "Allocated_Amount"]].rename(columns={"Allocated_Amount": "allocated_amount"}),
-        on="MP_Name", how="left",
+    agg = agg.merge(exp_agg, on="MP_Name", how="left")
+
+    # Base the roster on the full allocated set so allocation-only MPs (no works
+    # yet) are retained instead of dropped — MP Analytics needs every MP, not
+    # just the ~265 with works. Outer-merge the works aggregate onto it.
+    alloc = allocated[["MP_Name", "State", "Constituency", "Allocated_Amount"]].rename(
+        columns={"Allocated_Amount": "allocated_amount"}
     )
+    summary = agg.merge(alloc, on="MP_Name", how="outer", suffixes=("", "_alloc"))
+
+    # Prefer works-derived State/Constituency (present for scored MPs); fall
+    # back to the allocation file's for allocation-only MPs.
+    summary["State"] = summary["State"].fillna(summary["State_alloc"])
+    summary["Constituency"] = summary["Constituency"].fillna(summary["Constituency_alloc"])
+    summary = summary.drop(columns=["State_alloc", "Constituency_alloc"])
+
+    # Allocation-only MPs have no works: zero the count/risk metrics.
+    for col in ("total_works", "total_amount", "avg_risk_score", "max_risk_score", "flagged_works"):
+        summary[col] = summary[col].fillna(0)
+
     summary["utilization_rate"] = summary["total_fund_utilized"] / summary["allocated_amount"].replace(0, np.nan)
     summary["avg_risk_score"] = summary["avg_risk_score"].round(1)
     return summary
