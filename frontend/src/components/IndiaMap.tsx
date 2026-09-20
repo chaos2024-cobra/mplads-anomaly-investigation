@@ -53,7 +53,7 @@ export function IndiaMap({ selectedState, onSelectState }: IndiaMapProps) {
         </div>
       )}
       <svg
-        viewBox="0 -30 400 510"
+        viewBox="0 0 400 480"
         className="india-map-svg"
         aria-label="India state map"
       >

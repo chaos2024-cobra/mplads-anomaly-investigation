@@ -774,7 +774,7 @@ html, body, #root {
 .gov-map-svg {
   width: 100%;
   height: auto;
-  aspect-ratio: 400 / 510;
+  aspect-ratio: 400 / 480;
   display: block;
   max-height: 330px;
   margin: 0 auto;
