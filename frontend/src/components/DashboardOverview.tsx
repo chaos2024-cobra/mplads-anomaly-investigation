@@ -369,8 +369,10 @@ function RiskMapCard({
       if (v >= 38) return C.high;         // orange
       if (v >= 28) return C.medium;       // amber
       if (v >= 18) return '#A8C44A';      // yellow-green
-      if (v > 0)   return C.low;          // green
-      return C.minimal;
+      // State is present in the data (d exists) but has low/zero risk — show
+      // low-risk green, not grey. C.minimal is reserved for states genuinely
+      // absent from the dataset (handled by the `if (!d)` early return above).
+      return C.low;
     }
     const r = d.flagged / maxFlagged;
     if (r >= 0.75) return '#8B0000';
@@ -379,8 +381,7 @@ function RiskMapCard({
     if (r >= 0.27) return C.high;
     if (r >= 0.15) return C.medium;
     if (r >= 0.06) return '#A8C44A';
-    if (r > 0)     return C.low;
-    return C.minimal;
+    return C.low;                          // present but no flagged records → green, not grey
   }
 
   const top = useMemo(
