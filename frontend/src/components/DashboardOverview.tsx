@@ -389,8 +389,11 @@ function RiskMapCard({
   );
 
   const vb = useMemo(() => {
-    const w = 400 / zoom, h = 480 / zoom;
-    return `${(400 - w) / 2} ${(480 - h) / 2} ${w} ${h}`;
+    // Base viewBox is "0 -30 400 510": the extra northern headroom lets the
+    // full J&K/Ladakh extent (incl. Siachen) render without being clipped.
+    // Zoom keeps the map centred on (200, 225).
+    const w = 400 / zoom, h = 510 / zoom;
+    return `${200 - w / 2} ${225 - h / 2} ${w} ${h}`;
   }, [zoom]);
 
   return (
