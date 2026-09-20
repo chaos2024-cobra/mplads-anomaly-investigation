@@ -1352,17 +1352,22 @@ def get_trends():
             ORDER BY month DESC
             LIMIT 24
         """).fetchall()
+        # Every state gets a row so the choropleth never shows a low-activity
+        # state (e.g. J&K, Uttarakhand) as blank "no data". The colour keeps the
+        # flagged-severity gradient where a state has flagged records, and falls
+        # back to the all-works average (a low value) when it has none.
         by_state = conn.execute("""
             SELECT state,
-                   COUNT(*) AS flagged_count,
+                   SUM(CASE WHEN risk_score >= 20 THEN 1 ELSE 0 END) AS flagged_count,
                    SUM(CASE WHEN risk_score >= 75 THEN 1 ELSE 0 END) AS critical_count,
-                   ROUND(AVG(risk_score), 1) AS avg_risk_score,
+                   ROUND(COALESCE(
+                       AVG(CASE WHEN risk_score >= 20 THEN risk_score END),
+                       AVG(risk_score)
+                   ), 1) AS avg_risk_score,
                    SUM(amount) AS total_amount
             FROM works
-            WHERE risk_score >= 20
             GROUP BY state
             ORDER BY flagged_count DESC
-            LIMIT 20
         """).fetchall()
         signal_counts = conn.execute("""
             SELECT
