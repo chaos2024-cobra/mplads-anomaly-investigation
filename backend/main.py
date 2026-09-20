@@ -612,7 +612,10 @@ def compliance_rule_works(
 
 # ── MP Analytics ──────────────────────────────────────────────────────────────
 @app.get("/api/mp-analytics")
-def mp_analytics(mp_name: Optional[str] = Query(None)):
+def mp_analytics(
+    mp_name: Optional[str] = Query(None),
+    limit: int = Query(500, ge=1, le=2000),
+):
     """Detailed analytics for a specific MP, or leaderboard of all MPs."""
     conn = get_conn()
     try:
@@ -702,7 +705,9 @@ def mp_analytics(mp_name: Optional[str] = Query(None)):
                 "top_risk_works": rows_to_dicts(top_risk),
             }
         else:
-            # Leaderboard: all MPs ordered by avg_risk_score DESC, limit 50
+            # Leaderboard: all MPs ordered by avg_risk_score DESC.
+            # Default limit (500) comfortably covers every MP in the dataset;
+            # callers can override via ?limit= up to 2000.
             rows = conn.execute(
                 """SELECT mp_name, state, constituency,
                           COUNT(*) AS total_works,
@@ -723,7 +728,8 @@ def mp_analytics(mp_name: Optional[str] = Query(None)):
                    FROM works
                    GROUP BY mp_name, state, constituency
                    ORDER BY avg_risk_score DESC
-                   LIMIT 50""",
+                   LIMIT ?""",
+                (limit,),
             ).fetchall()
             return {"results": rows_to_dicts(rows)}
     finally:
