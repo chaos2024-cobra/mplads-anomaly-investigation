@@ -614,7 +614,7 @@ def compliance_rule_works(
 @app.get("/api/mp-analytics")
 def mp_analytics(
     mp_name: Optional[str] = Query(None),
-    limit: int = Query(500, ge=1, le=2000),
+    limit: int = Query(1000, ge=1, le=2000),
 ):
     """Detailed analytics for a specific MP, or leaderboard of all MPs."""
     conn = get_conn()
