@@ -45,9 +45,14 @@ _frontend_url = os.environ.get("FRONTEND_URL")
 if _frontend_url:
     _cors_origins.append(_frontend_url.rstrip("/"))
 
+# Vercel assigns a unique URL to every deployment (production + per-branch/PR
+# previews), so match them all by pattern rather than a single FRONTEND_URL.
+_cors_origin_regex = r"https://.*\.vercel\.app"
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,
+    allow_origin_regex=_cors_origin_regex,
     allow_methods=["*"],
     allow_headers=["*"],
 )
