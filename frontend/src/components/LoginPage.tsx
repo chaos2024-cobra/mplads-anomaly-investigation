@@ -4,9 +4,10 @@ import { authLogin, type AuthSession } from '../api/client';
 interface Props {
   onLogin: (session: AuthSession) => void;
   onSignup: () => void;
+  onGuest: () => void;
 }
 
-export function LoginPage({ onLogin, onSignup }: Props) {
+export function LoginPage({ onLogin, onSignup, onGuest }: Props) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -137,6 +138,12 @@ export function LoginPage({ onLogin, onSignup }: Props) {
 
           <button type="button" className="signup-back-btn" onClick={onSignup} disabled={loading}>
             Don't have an account? Sign Up
+          </button>
+
+          <div className="login-guest-sep"><span>or</span></div>
+
+          <button type="button" className="login-guest-btn" onClick={onGuest} disabled={loading}>
+            Continue as guest — view risk scores without signing in
           </button>
         </form>
 

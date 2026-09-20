@@ -5023,6 +5023,48 @@ html, body, #root {
   cursor: not-allowed;
 }
 
+/* Guest / public entry on the login screen */
+.login-guest-sep {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  color: var(--text-dim, #94a3b8);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 12px 0 2px;
+}
+.login-guest-sep::before,
+.login-guest-sep::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border, #e2e8f0);
+}
+.login-guest-sep span { padding: 0 10px; }
+
+.login-guest-btn {
+  width: 100%;
+  padding: 10px;
+  background: var(--bg-subtle, #f1f5f9);
+  border: 1px dashed var(--border-strong, #cbd5e1);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.login-guest-btn:hover:not(:disabled) {
+  background: #fff;
+  color: var(--blue);
+  border-color: var(--blue);
+}
+.login-guest-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* User chip in top header after login */
 .header-user-chip {
   display: flex;

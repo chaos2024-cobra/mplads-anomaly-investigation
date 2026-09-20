@@ -1,4 +1,4 @@
-export type Role = 'admin' | 'analyst' | 'auditor';
+export type Role = 'admin' | 'analyst' | 'auditor' | 'public';
 
 export interface Permissions {
   canExport: boolean;
@@ -45,6 +45,20 @@ const ROLE_PERMISSIONS: Record<Role, Permissions> = {
     canDrillCompliance: false,
     canOpenDossier: true,
     hiddenViews: ['copilot', 'patterns'],
+  },
+  // Public / guest viewer — no login required. Read-only access so anyone can
+  // see risk scores and the analytics views, but every write, export, AI and
+  // admin capability is disabled and the AI/admin surfaces are hidden.
+  public: {
+    canExport: false,
+    canPrioritize: false,
+    canViewAICopilot: false,
+    canViewPatterns: false,
+    canGenerateBrief: false,
+    canRunLLMAssessment: false,
+    canDrillCompliance: false,
+    canOpenDossier: true,
+    hiddenViews: ['copilot', 'patterns', 'system'],
   },
 };
 

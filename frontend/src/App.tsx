@@ -77,6 +77,15 @@ const VIEW_META: Record<ViewId, { title: string; sub: string }> = {
   system:     { title: 'Data & System', sub: 'Audit trail, data lineage and platform status' },
 };
 
+// Synthetic session for the "Continue as guest" path. It carries no real
+// backend token, so auth validation and logout network calls are skipped for it.
+const GUEST_SESSION: AuthSession = {
+  token: 'guest',
+  username: 'guest',
+  role: 'public',
+  display_name: 'Public Viewer',
+};
+
 export default function App() {
   // ── Auth ──────────────────────────────────────────────────────────────────
   const [session, setSession] = useState<AuthSession | null>(() => {
@@ -90,6 +99,8 @@ export default function App() {
 
   useEffect(() => {
     if (!session) { setAuthChecking(false); return; }
+    // Guest/public sessions are synthetic — no backend token to validate.
+    if (session.role === 'public') { setAuthChecking(false); return; }
     api.authMe(session.token).then(s => {
       setSession(s);
       localStorage.setItem('mplads_session', JSON.stringify(s));
@@ -108,7 +119,7 @@ export default function App() {
   }
 
   async function handleLogout() {
-    if (session) await api.authLogout(session.token).catch(() => {});
+    if (session && session.role !== 'public') await api.authLogout(session.token).catch(() => {});
     setSession(null);
     localStorage.removeItem('mplads_session');
   }
@@ -125,7 +136,7 @@ export default function App() {
     if (showSignup) {
       return <SignupPage onLogin={handleLogin} onBack={() => setShowSignup(false)} />;
     }
-    return <LoginPage onLogin={handleLogin} onSignup={() => setShowSignup(true)} />;
+    return <LoginPage onLogin={handleLogin} onSignup={() => setShowSignup(true)} onGuest={() => handleLogin(GUEST_SESSION)} />;
   }
 
   return <AuthenticatedApp session={session} onLogout={handleLogout} />;
