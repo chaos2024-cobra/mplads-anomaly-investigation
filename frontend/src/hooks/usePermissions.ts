@@ -1,4 +1,4 @@
-export type Role = 'admin' | 'analyst' | 'auditor';
+export type Role = 'admin' | 'analyst' | 'auditor' | 'public';
 
 export interface Permissions {
   canExport: boolean;
@@ -45,6 +45,17 @@ const ROLE_PERMISSIONS: Record<Role, Permissions> = {
     canDrillCompliance: false,
     canOpenDossier: true,
     hiddenViews: ['copilot', 'patterns'],
+  },
+  public: {
+    canExport: false,
+    canPrioritize: false,
+    canViewAICopilot: false,
+    canViewPatterns: true,
+    canGenerateBrief: false,
+    canRunLLMAssessment: false,
+    canDrillCompliance: true,
+    canOpenDossier: true,
+    hiddenViews: ['copilot'],
   },
 };
 

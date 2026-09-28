@@ -125,7 +125,7 @@ export default function App() {
     if (showSignup) {
       return <SignupPage onLogin={handleLogin} onBack={() => setShowSignup(false)} />;
     }
-    return <LoginPage onLogin={handleLogin} onSignup={() => setShowSignup(true)} />;
+    return <LoginPage onLogin={handleLogin} onPublicAccess={async () => handleLogin(await api.authPublic())} onSignup={() => setShowSignup(true)} />;
   }
 
   return <AuthenticatedApp session={session} onLogout={handleLogout} />;

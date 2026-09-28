@@ -299,6 +299,15 @@ export async function authLogin(username: string, password: string): Promise<Aut
   return r.json();
 }
 
+export async function authPublic(): Promise<AuthSession> {
+  const r = await fetch(`${BASE_URL}/api/auth/public`, {
+    method: 'POST',
+    signal: AbortSignal.timeout(8000),
+  });
+  if (!r.ok) throw new Error('Public access is currently unavailable');
+  return r.json();
+}
+
 export async function authRegister(username: string, password: string, displayName: string, role: string): Promise<AuthSession> {
   const r = await fetch(`${BASE_URL}/api/auth/register`, {
     method: 'POST',

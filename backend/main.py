@@ -26,6 +26,9 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse, Response
 from pydantic import BaseModel
+from dotenv import load_dotenv
+
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
 
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mplads.db")
 
@@ -155,6 +158,14 @@ def auth_login(req: LoginRequest):
         "display_name": user["display_name"],
     }
     return {"token": token, "username": req.username.strip().lower(), "role": user["role"], "display_name": user["display_name"]}
+
+@app.post("/api/auth/public")
+def auth_public():
+    """Create a read-only session for public record access without credentials."""
+    token = secrets.token_hex(32)
+    session = {"username": "public", "role": "public", "display_name": "Public Viewer"}
+    _sessions[token] = session
+    return {"token": token, **session}
 
 @app.post("/api/auth/logout")
 def auth_logout(token: str = Query(...)):
@@ -891,7 +902,7 @@ You have access to data about MPLADS (Members of Parliament Local Area Developme
     from groq import Groq
     client = Groq(api_key=groq_key)
     resp = client.chat.completions.create(
-        model="openai/gpt-oss-120b",
+        model=os.environ.get("GROQ_MODEL", "qwen/qwen3.8-27b"),
         messages=[{"role": "system", "content": system_prompt}] + messages,
         max_tokens=1024,
         temperature=0.3,
@@ -1131,7 +1142,7 @@ def _groq_client():
 def _groq_json(prompt: str, system: str, temperature: float = 0.1) -> dict:
     client = _groq_client()
     resp = client.chat.completions.create(
-        model="openai/gpt-oss-120b",
+        model=os.environ.get("GROQ_MODEL", "qwen/qwen3.8-27b"),
         messages=[{"role": "system", "content": system}, {"role": "user", "content": prompt}],
         max_tokens=1024,
         temperature=temperature,
@@ -1248,7 +1259,7 @@ Paragraph 3 — Recommended Next Steps: Concrete investigative actions an audito
 
     client = _groq_client()
     resp = client.chat.completions.create(
-        model="openai/gpt-oss-120b",
+        model=os.environ.get("GROQ_MODEL", "qwen/qwen3.8-27b"),
         messages=[{"role": "user", "content": prompt}],
         max_tokens=800,
         temperature=0.4,
@@ -1906,7 +1917,7 @@ async def chat(req: ChatRequest):
 
     def stream():
         completion = client.chat.completions.create(
-            model="openai/gpt-oss-120b",
+            model=os.environ.get("GROQ_MODEL", "qwen/qwen3.8-27b"),
             messages=[{"role": "system", "content": system_prompt}] + messages,
             max_tokens=1024,
             temperature=0.3,
