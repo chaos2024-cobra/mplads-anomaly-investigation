@@ -20,7 +20,14 @@ import type {
   DescriptionQualityResponse,
 } from '../types';
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL;
+const staleRenderUrls = new Set([
+  'https://mplads-api.onrender.com',
+  'https://mplads-api-isyt.onrender.com',
+]);
+const BASE_URL = staleRenderUrls.has(configuredBaseUrl)
+  ? 'https://mplads-api-i16n.onrender.com'
+  : configuredBaseUrl || 'http://localhost:8000';
 
 async function apiGet<T>(path: string, params?: Record<string, string | number | undefined | null>): Promise<T> {
   const url = new URL(`${BASE_URL}${path}`);
