@@ -3,15 +3,17 @@ import { authLogin, type AuthSession } from '../api/client';
 
 interface Props {
   onLogin: (session: AuthSession) => void;
+  onPublicAccess: () => Promise<void>;
   onSignup: () => void;
   onGuest: () => void;
 }
 
-export function LoginPage({ onLogin, onSignup, onGuest }: Props) {
+export function LoginPage({ onLogin, onPublicAccess, onSignup, onGuest }: Props) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [publicLoading, setPublicLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
   const userRef = useRef<HTMLInputElement>(null);
 
@@ -31,6 +33,18 @@ export function LoginPage({ onLogin, onSignup, onGuest }: Props) {
       setError(err.message || 'Login failed');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handlePublicAccess() {
+    setError('');
+    setPublicLoading(true);
+    try {
+      await onPublicAccess();
+    } catch (err: any) {
+      setError(err.message || 'Public access is currently unavailable');
+    } finally {
+      setPublicLoading(false);
     }
   }
 
@@ -136,7 +150,7 @@ export function LoginPage({ onLogin, onSignup, onGuest }: Props) {
             )}
           </button>
 
-          <button type="button" className="signup-back-btn" onClick={onSignup} disabled={loading}>
+          <button type="button" className="signup-back-btn" onClick={onSignup} disabled={loading || publicLoading}>
             Don't have an account? Sign Up
           </button>
 
@@ -144,6 +158,10 @@ export function LoginPage({ onLogin, onSignup, onGuest }: Props) {
 
           <button type="button" className="login-guest-btn" onClick={onGuest} disabled={loading}>
             Continue as guest — view risk scores without signing in
+          </button>
+
+          <button type="button" className="signup-back-btn" onClick={handlePublicAccess} disabled={loading || publicLoading}>
+            {publicLoading ? 'Opening public access...' : 'Continue as public viewer'}
           </button>
         </form>
 
