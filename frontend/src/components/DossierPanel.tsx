@@ -118,8 +118,8 @@ function DossierContent({ workId, onClose, canGenerateBrief = true, canRunLLMAss
     );
   }
 
-  const hasML = detail.model_adjusted && detail.heuristic_score !== undefined && detail.heuristic_score !== null;
-  const score = hasML && scoreMode === 'base'
+  const hasScoreComparison = detail.heuristic_score !== undefined && detail.heuristic_score !== null;
+  const score = hasScoreComparison && scoreMode === 'base'
     ? safeFloat(detail.heuristic_score, 0)
     : safeFloat(detail.risk_score, 0);
   const level = detail.risk_level || 'Low - Normal Pattern';
@@ -306,7 +306,7 @@ function DossierContent({ workId, onClose, canGenerateBrief = true, canRunLLMAss
           <span style={{ fontFamily: 'var(--mono)', fontSize: '0.72rem', fontWeight: 700, color: tc }}>
             SCORE {Math.round(score)}
           </span>
-          {hasML && (
+          {hasScoreComparison && (
             <div style={{
               display: 'flex',
               background: '#e2e8f0',
@@ -327,7 +327,7 @@ function DossierContent({ workId, onClose, canGenerateBrief = true, canRunLLMAss
                 boxShadow: scoreMode === 'ml' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
                 transition: 'all 0.2s ease',
               }}>
-                ✨ ML
+                ML {Math.round(safeFloat(detail.risk_score, 0))}
               </div>
               <div style={{
                 padding: '2px 8px',
@@ -339,7 +339,7 @@ function DossierContent({ workId, onClose, canGenerateBrief = true, canRunLLMAss
                 boxShadow: scoreMode === 'base' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
                 transition: 'all 0.2s ease',
               }}>
-                BASE
+                BASE {Math.round(safeFloat(detail.heuristic_score, 0))}
               </div>
             </div>
           )}
