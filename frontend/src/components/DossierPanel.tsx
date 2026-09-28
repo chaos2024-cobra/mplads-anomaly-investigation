@@ -988,7 +988,7 @@ function MultiDimScore({ detail }: { detail: Project }) {
     <div className="multidim-score">
       <div className="multidim-title">RISK DIMENSIONS</div>
       {dims.map(d => {
-        const col = d.score >= 70 ? 'var(--risk-critical)' : d.score >= 40 ? 'var(--risk-high)' : 'var(--risk-medium)';
+        const col = d.score >= 70 ? '#ef4444' : d.score >= 40 ? '#f97316' : '#f59e0b';
         return (
           <div key={d.label} className="multidim-row">
             <div className="multidim-label">{d.label}</div>

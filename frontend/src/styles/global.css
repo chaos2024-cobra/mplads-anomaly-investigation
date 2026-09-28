@@ -3183,9 +3183,10 @@ html, body, #root {
 .multidim-bar-wrap { display: flex; align-items: center; }
 .multidim-bar-track {
   flex: 1;
-  height: 5px;
-  background: var(--surface-raised);
-  border-radius: 3px;
+  height: 8px;
+  background: #e2e8f0;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
   overflow: hidden;
 }
 .multidim-bar-fill {
