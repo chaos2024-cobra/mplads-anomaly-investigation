@@ -2743,6 +2743,52 @@ html, body, #root {
   color: var(--text-secondary);
 }
 
+.ai-markdown > :first-child { margin-top: 0; }
+.ai-markdown > :last-child { margin-bottom: 0; }
+.ai-markdown p { margin: 0.35rem 0; }
+.ai-markdown h1,
+.ai-markdown h2,
+.ai-markdown h3 {
+  color: var(--text);
+  font-size: 0.78rem;
+  margin: 0.65rem 0 0.25rem;
+}
+.ai-markdown ul,
+.ai-markdown ol {
+  margin: 0.35rem 0;
+  padding-left: 1.2rem;
+}
+.ai-markdown li { margin: 0.15rem 0; }
+.ai-markdown strong { color: var(--text); }
+.ai-markdown code {
+  padding: 0.08rem 0.25rem;
+  border-radius: 3px;
+  background: rgba(148,163,184,0.14);
+  color: var(--info);
+  font-family: var(--mono);
+  font-size: 0.68rem;
+}
+.ai-markdown pre {
+  overflow-x: auto;
+  margin: 0.45rem 0;
+  padding: 0.55rem;
+  border: 1px solid rgba(148,163,184,0.16);
+  border-radius: var(--r-sm);
+  background: rgba(15,23,42,0.55);
+}
+.ai-markdown pre code {
+  padding: 0;
+  background: transparent;
+  color: var(--text-secondary);
+}
+.ai-markdown blockquote {
+  margin: 0.45rem 0;
+  padding-left: 0.65rem;
+  border-left: 2px solid var(--info);
+  color: var(--text-dim);
+}
+.ai-markdown a { color: var(--info); text-decoration: underline; }
+
 .ai-cursor {
   display: inline-block;
   width: 2px;

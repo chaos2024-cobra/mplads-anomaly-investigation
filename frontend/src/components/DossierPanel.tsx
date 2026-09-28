@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback, Fragment } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { useApi } from '../hooks/useApi';
 import { getWorkDetail, getWorkPeers, getRelatedTransactions, streamChat, generateBrief, getLLMRisk, getSimilarWorks } from '../api/client';
 import type { ChatMessage } from '../api/client';
@@ -712,7 +713,14 @@ function AiChat({ workId }: { workId: string }) {
         {messages.map((m, i) => (
           <div key={i} className={`ai-msg ai-msg-${m.role}`}>
             <div className="ai-msg-label">{m.role === 'user' ? 'YOU' : 'AI'}</div>
-            <div className="ai-msg-content">{m.content}{m.role === 'assistant' && streaming && i === messages.length - 1 && <span className="ai-cursor" />}</div>
+            <div className="ai-msg-content">
+              {m.role === 'assistant' ? (
+                <div className="ai-markdown">
+                  <ReactMarkdown>{m.content}</ReactMarkdown>
+                  {streaming && i === messages.length - 1 && <span className="ai-cursor" />}
+                </div>
+              ) : m.content}
+            </div>
           </div>
         ))}
         {error && <div className="ai-error">{error}</div>}
